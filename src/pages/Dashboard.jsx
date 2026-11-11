@@ -54,7 +54,7 @@ export default function Dashboard() {
       setTimeout(() => {
         setAlerts((list) => list.filter((a) => a.id !== alert.id))
         setLeaving((l) => l.filter((id) => id !== alert.id))
-      }, 220)
+      }, 160)
       toast(`Alert #${alert.id} acknowledged`)
     } catch (e) {
       toast(e.message, 'error')

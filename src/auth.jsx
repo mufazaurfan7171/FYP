@@ -8,7 +8,10 @@ export const useAuth = () => useContext(AuthCtx)
 export const homeFor = (role) => (role === 'admin' ? '/admin/cameras' : '/')
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('sentinex_user') || 'null'))
+  // dev only (not in production builds): ?as=admin|manager|supervisor signs in a demo user for screenshots
+  const as = import.meta.env.DEV && new URLSearchParams(location.search).get('as')
+  const demo = as && { admin: { id: 1, name: 'Ayesha Khan', role: 'admin' }, manager: { id: 2, name: 'Bilal Ahmed', role: 'manager' }, supervisor: { id: 3, name: 'Sana Malik', role: 'supervisor' } }[as]
+  const [user, setUser] = useState(() => demo || JSON.parse(localStorage.getItem('sentinex_user') || 'null'))
   async function login(email, password) {
     const u = await apiLogin(email, password)
     localStorage.setItem('sentinex_user', JSON.stringify(u))

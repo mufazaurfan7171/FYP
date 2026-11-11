@@ -28,8 +28,6 @@ export const violationLabel = (k) => VIOLATIONS.find((v) => v.key === k)?.label 
 export const roleLabel = (k) => ROLES.find((r) => r.key === k)?.label || k
 export const ppeLabel = (k) => PPE.find((p) => p.key === k)?.label || k
 
-const SAMPLE_CLIP = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
-const BROKEN_CLIP = '/missing-clip.mp4'
 
 // ---------- seed data ----------
 let users = [
@@ -61,7 +59,6 @@ let nextAlert = 501
 
 function addIncident({ cameraId, type, ts, source = 'live', videoId = null }) {
   const id = nextIncident++
-  const r = rand()
   const inc = {
     id,
     cameraId,
@@ -71,7 +68,6 @@ function addIncident({ cameraId, type, ts, source = 'live', videoId = null }) {
     videoId,
     trackId: 1 + Math.floor(rand() * 40),
     snapshot: true,
-    clipUrl: r < 0.65 ? SAMPLE_CLIP : r < 0.92 ? null : BROKEN_CLIP,
   }
   incidents.unshift(inc)
   return inc

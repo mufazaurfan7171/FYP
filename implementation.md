@@ -150,7 +150,7 @@ React SPA. Routing by role; nav only shows pages the role may open.
 | Login | `/login` | all | UC-09 |
 | Dashboard (summary, recent violations, live alerts + acknowledge) | `/` | manager, supervisor | UC-03, UC-06 |
 | Search violations | `/incidents` | manager, supervisor | UC-04 |
-| Incident detail + clip / snapshot | `/incidents/:id` | manager, supervisor | UC-05 |
+| Incident detail + snapshot | `/incidents/:id` | manager, supervisor | UC-05 |
 | Analyse recorded video | `/upload` | supervisor | UC-07 |
 | Cameras & PPE rules | `/admin/cameras` | admin | UC-08 |
 | Users | `/admin/users` | admin | UC-09 |
@@ -159,17 +159,111 @@ React SPA. Routing by role; nav only shows pages the role may open.
   a `fetch('/api/...')` call with the token header. Pages do not change.
 - "Near real time" alerts (UC-06) = the dashboard polls `/api/alerts` every 5 s. No websockets.
 - Pending alerts stay pending until acknowledged, so they show again on the next load.
+- Incident page shows the saved snapshot as evidence (no video player in the UI).
 - Recorded video analysis: upload to Blob → POST `/api/videos` → poll `/api/videos?id=` every 3 s → show summary.
 - Token + user kept in `localStorage`.
 - Mock phase only: add `?fail=1` to any URL to force the SRS error messages so every exception flow can be seen.
+- Dev server only: `?as=admin|manager|supervisor` signs in a demo user (for screenshots). Not in production builds.
+- Responsive: desktop rail; under 900 px a top bar + bottom tab bar; tables become stacked cards on phones.
 
 ## Environment variables (Vercel)
 
 `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `JWT_SECRET`, `WORKER_KEY`. Worker uses `API_URL` + `WORKER_KEY`.
 
-## Build order
+## Implementation plan
 
-1. **UI with mock data** ← current phase.
-2. `/api` functions + `schema.sql` + seed admin user; swap `src/api.js` to `fetch`.
-3. `worker/worker.py`.
-4. Deploy: push repo, import in Vercel (framework: Vite), set env vars, run `schema.sql` once.
+### Phase 1 — UI with mock data ✅ (done)
+
+`src/` React pages for every use case, `src/api.js` mock, responsive down to phones. Nothing else.
+
+### Phase 2 — Serverless API (Vercel) — not started
+
+Files to add (that is all of them):
+
+```
+schema.sql          tables above + one seed admin (password hashed with bcryptjs, run once in Neon console)
+api/_lib.js         sql (neon), send(res, code, body), auth(req, roles), workerAuth(req)
+api/login.js        UC-09
+api/dashboard.js    UC-03
+api/incidents.js    UC-04, UC-05
+api/alerts.js       UC-06
+api/videos.js       UC-07
+api/upload.js       UC-07 (Blob client-upload token)
+api/cameras.js      UC-08
+api/users.js        UC-09
+api/worker.js       UC-01, 02, 10–13 (called by the Python worker)
+```
+
+Dependencies: `@neondatabase/serverless`, `@vercel/blob`, `bcryptjs`, `jsonwebtoken`. Nothing else.
+
+`_lib.js` (about 30 lines):
+- `auth(req, roles)`: read `Authorization: Bearer <jwt>`, `jwt.verify` with `JWT_SECRET`, check `roles.includes(user.role)`,
+  return the user or `null` (route then sends 401/403).
+- `workerAuth(req)`: `req.headers['x-worker-key'] === process.env.WORKER_KEY`.
+- JSON keys are camelCase so the UI shape stays the same as the mock (`streamUrl`, `requiredPpe`, `cameraId`, `trackId`, `ts`,
+  `snapshotUrl`, `createdAt`). Convert in SQL with `as "streamUrl"`, no mapper library.
+
+Each route, what it does (plain SQL):
+
+| Route | SQL / logic | Errors (exact text to UI) |
+|---|---|---|
+| POST `/api/login` | select user by email; `bcrypt.compare`; inactive → 403; return `{ token, user }` (token 12 h) | "Incorrect email or password." / "This account is deactivated. Contact your System Admin." |
+| GET `/api/dashboard` | counts today / 7 days, count by type, count by camera, latest 8 incidents join cameras, pending alerts join incidents + cameras | "Could not load dashboard. Please try again." |
+| GET `/api/incidents` | `where ts::date >= $from and ts::date <= $to and camera_id = $c and violation_type = $t` (each only if given), `order by ts desc limit 50` when no filters, else `limit 500` | "Could not load incidents. Please try again." |
+| GET `/api/incidents?id=` | one incident join camera, plus its alert row | "Could not load incident clip." |
+| GET `/api/alerts` | pending alerts join incidents + cameras, newest first | — |
+| PATCH `/api/alerts` `{id}` | `update alerts set status='acknowledged', acknowledged_by=$user, acknowledged_at=now()` | "Could not acknowledge alert. Please try again." |
+| POST `/api/upload` | `handleUpload` from `@vercel/blob/client`; allow only `video/*`, max 500 MB | — |
+| POST `/api/videos` `{cameraId, fileName, fileUrl}` | camera must have rules (else 400 "<camera> has no PPE rules…"); extension in mp4/avi/mov/mkv (else 400 "Unsupported or corrupted video file."); insert `status='pending'`; return id | as left |
+| GET `/api/videos?id=` | `{ status, summary, error }`; summary includes incident list | `failed` → "Unsupported or corrupted video file." |
+| GET/POST/PUT `/api/cameras` | list; insert/update name, stream_url, location, active; PUT `{id, requiredPpe}` updates rules | field errors 400; DB error → "Configuration could not be saved. Please try again." |
+| GET/POST/PUT `/api/users` | list (no hashes); insert with `bcrypt.hash(pw, 10)`; update (hash only if new password); PUT `{id, active}` = deactivate/reactivate | duplicate email 409 "A user with this email already exists."; DB error → "User could not be saved. Please try again." |
+| GET `/api/worker?cameras=1` | active cameras with `required_ppe` | — |
+| GET `/api/worker?videos=pending` | oldest pending video → set `processing`, return it | — |
+| POST `/api/worker` `{type:'status', cameraId, status}` | update cameras.status | — |
+| POST `/api/worker` `{type:'incident', ...}` | insert incident; if `source='live'` insert alert (pending); return incident id | — |
+| POST `/api/worker` `{type:'video', id, status, summary, error}` | update videos row | — |
+
+Then replace the mock in `src/api.js` function by function (same names, same return shapes, pages untouched):
+
+| `src/api.js` function | becomes |
+|---|---|
+| `login` | POST `/api/login`, store token |
+| `getDashboard` | GET `/api/dashboard` |
+| `getAlerts`, `acknowledgeAlert` | GET / PATCH `/api/alerts` |
+| `searchIncidents`, `getIncident` | GET `/api/incidents` |
+| `analyseVideo` | `upload()` from `@vercel/blob/client` → POST `/api/videos` → poll GET `/api/videos?id=` every 3 s, call `onStep` from the status |
+| `getCameras`, `saveCamera`, `saveRules` | `/api/cameras` |
+| `getUsers`, `saveUser`, `setUserActive` | `/api/users` |
+
+A 10-line `call(path, opts)` helper adds the token header and throws `new Error(body.error)` (plus `fields`) on non-200.
+Delete the seed data, `simulateLive`, `?fail=1` and the dev `?as=` shortcut when this is done.
+
+### Phase 3 — Detection worker — not started
+
+`worker/worker.py` + `worker/requirements.txt` (`ultralytics`, `opencv-python`, `requests`). Runs on the factory PC.
+Steps are in "Detection worker" above. Snapshots: `cv2.imencode('.jpg')` → upload with a Blob token from the API → send
+`snapshotUrl` in the incident POST. Run: `python worker.py` with `API_URL` and `WORKER_KEY` set.
+
+### Phase 4 — Deploy
+
+1. Create a Neon (or Vercel Postgres) database, run `schema.sql`.
+2. Create a Vercel Blob store.
+3. Import the repo in Vercel, framework Vite (build `vite build`, output `dist`). `vercel.json` already rewrites routes to the SPA.
+4. Set env vars `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `JWT_SECRET`, `WORKER_KEY`.
+5. Start the worker on the factory PC pointing at the Vercel URL.
+
+### Done when (one check per use case)
+
+| UC | Check |
+|---|---|
+| 01 | Unplug a camera → shows Disconnected; plug back → Connected |
+| 02 / 10 / 11 | Walk in front of a camera without a helmet → one incident with a snapshot and track id |
+| 12 | Same worker keeps going without a helmet → still one alert |
+| 03 | Dashboard shows the counts, recent violations and the alert |
+| 06 | Alert appears within ~5 s; Acknowledge removes it; reload keeps acknowledged ones gone |
+| 04 | Filter by date / camera / type; nonsense range → "No incidents found" |
+| 05 | Open an incident → details + snapshot |
+| 07 / 13 | Upload a recording → summary; its incidents appear in search; no alerts; a .txt renamed .mp4 → "Unsupported or corrupted video file." |
+| 08 | Add / edit a camera, missing fields rejected, change PPE rules |
+| 09 | Create / edit / deactivate users; duplicate email rejected; deactivated user cannot sign in; each role sees only its pages |

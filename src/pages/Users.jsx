@@ -105,7 +105,7 @@ export default function Users() {
                     <tr key={u.id} className={u.active ? '' : 'inactive'}>
                       <td>
                         <strong>{u.name}</strong>{' '}
-                        {u.id === me.id && <span className="badge badge-yellow">You</span>}
+                        {u.id === me.id && <span className="badge">You</span>}
                       </td>
                       <td>{u.email}</td>
                       <td>{roleLabel(u.role)}</td>

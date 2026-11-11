@@ -9,3 +9,12 @@
 .inc-dl dt { font-size: 13px; color: var(--ink-2); margin-bottom: 2px; }
 .inc-dl dd { margin: 0; }
 @media (max-width: 800px) { .inc-detail { grid-template-columns: 1fr; } }
+
+@media (max-width: 640px) {
+  .inc-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .inc-table tr { grid-template-columns: 96px 1fr; align-items: start; }
+  .inc-table td:nth-child(1) { grid-column: 1; grid-row: 1 / span 4; }
+  .inc-table td:not(:nth-child(1)) { grid-column: 2; }
+  .inc-table td:nth-child(6) { display: none; }
+  .inc-table td:nth-child(2) { justify-self: start; }
+}

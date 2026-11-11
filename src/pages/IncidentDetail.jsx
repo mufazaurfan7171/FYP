@@ -10,14 +10,12 @@ export default function IncidentDetail() {
   const navigate = useNavigate()
   const [inc, setInc] = useState(null)
   const [error, setError] = useState('')
-  const [clipFailed, setClipFailed] = useState(false)
   const [tries, setTries] = useState(0)
 
   useEffect(() => {
     let live = true
     setInc(null)
     setError('')
-    setClipFailed(false)
     getIncident(id)
       .then((r) => live && setInc(r))
       .catch((e) => live && setError(e.message))
@@ -47,20 +45,7 @@ export default function IncidentDetail() {
       ) : (
         <div className="inc-detail">
           <div className="inc-media">
-            {inc.clipUrl && !clipFailed ? (
-              <video
-                src={inc.clipUrl}
-                controls autoPlay muted playsInline
-                aria-label={`Clip of ${inc.camera.name} showing the violation`}
-                onError={() => setClipFailed(true)}
-              />
-            ) : (
-              <>
-                {clipFailed && <ErrorBox message="Could not load incident clip." />}
-                {!inc.clipUrl && <div className="notice">No clip was saved for this incident. Showing the snapshot.</div>}
-                <Snapshot incident={inc} />
-              </>
-            )}
+            <Snapshot incident={inc} />
           </div>
 
           <div className="panel">
@@ -72,7 +57,6 @@ export default function IncidentDetail() {
                 <div><dt>Time</dt><dd>{fmtFull(inc.ts)}</dd></div>
                 <div><dt>Source</dt><dd><SourceBadge source={inc.source} /></dd></div>
                 <div><dt>Worker tracking ID</dt><dd className="mono">{inc.trackId}</dd></div>
-                <div><dt>Incident</dt><dd className="mono">#{inc.id}</dd></div>
                 {inc.alert && (
                   <div>
                     <dt>Alert</dt>

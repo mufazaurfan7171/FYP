@@ -110,7 +110,7 @@ export default function Incidents() {
             </span>
           </div>
           <div className="table-wrap">
-            <table className="table">
+            <table className="table inc-table">
               <thead>
                 <tr>
                   <th>Snapshot</th><th>Violation</th><th>Camera</th><th>Time</th><th>Source</th><th>Incident</th>

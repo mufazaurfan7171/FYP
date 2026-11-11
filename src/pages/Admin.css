@@ -14,3 +14,14 @@
   .split { grid-template-columns: minmax(0, 1fr); }
   .split .rules { position: static; }
 }
+
+@media (max-width: 640px) {
+  .cell-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .cell-actions .btn { flex: 1; }
+  .row-select { min-height: 32px; font-size: 15px; }
+  .row-name .mono { overflow-wrap: anywhere; }
+}
+@media (max-width: 640px) {
+  .table tr.selected { background: #fff; box-shadow: inset 3px 0 0 var(--steel); }
+  .table tr.selected td, .table tr.selected td:first-child { background: none; box-shadow: none; }
+}

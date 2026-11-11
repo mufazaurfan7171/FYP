@@ -7,8 +7,8 @@ import { Icon } from './ui'
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard', roles: ['manager', 'supervisor'] },
   { to: '/incidents', label: 'Violations', icon: 'search', roles: ['manager', 'supervisor'] },
-  { to: '/upload', label: 'Analyse video', icon: 'video', roles: ['supervisor'] },
-  { to: '/admin/cameras', label: 'Cameras & rules', icon: 'camera', roles: ['admin'] },
+  { to: '/upload', label: 'Analyse video', icon: 'video', short: 'Analyse', roles: ['supervisor'] },
+  { to: '/admin/cameras', label: 'Cameras & rules', icon: 'camera', short: 'Cameras', roles: ['admin'] },
   { to: '/admin/users', label: 'Users', icon: 'users', roles: ['admin'] },
 ]
 
@@ -37,7 +37,8 @@ export default function Layout() {
           {NAV.filter((n) => n.roles.includes(user.role)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}>
               <Icon name={n.icon} />
-              {n.label}
+              <span className="nav-long">{n.label}</span>
+              <span className="nav-short">{n.short || n.label}</span>
               {n.to === '/' && pending > 0 && <span className="nav-count" aria-label={`${pending} pending alerts`}>{pending}</span>}
             </NavLink>
           ))}

@@ -8,7 +8,7 @@
   --panel-2: #eef0ec;
   --ink: #1b2120;
   --ink-2: #4d5553;
-  --ink-3: #7c8481;
+  --ink-3: #636b68;
   --line: #d3d7d1;
   --line-2: #c3c8c1;
   --rail: #1e2524;
@@ -18,9 +18,9 @@
   --yellow: #f2b200;
   --yellow-ink: #4a3600;
   --yellow-wash: #fbefc6;
-  --red: #c0351f;
+  --red: #a82e1a;
   --red-wash: #f6ddd7;
-  --green: #2c7a4d;
+  --green: #276d45;
   --green-wash: #d9ecdf;
   --steel: #2f5873;
 
@@ -31,7 +31,7 @@
   --r: 6px;
   --r-lg: 10px;
 
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   --hazard: repeating-linear-gradient(-45deg, var(--yellow) 0 7px, var(--ink) 7px 14px);
@@ -57,6 +57,7 @@ p { margin: 0; }
 a { color: inherit; }
 button, input, select { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+.rail :focus-visible { outline-color: #fff; }
 .muted { color: var(--ink-2); }
 .faint { color: var(--ink-3); }
 .mono { font-family: var(--mono); font-size: 12.5px; }
@@ -158,7 +159,7 @@ button, input, select { font: inherit; color: inherit; }
 .chip input { position: absolute; opacity: 0; pointer-events: none; }
 .chip .tick { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink-3); display: grid; place-items: center; }
 .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
-.chip.on .tick { border-color: var(--yellow); background: var(--yellow); }
+.chip.on .tick { border-color: #fff; background: #fff; color: var(--ink); }
 .chip:has(input:focus-visible) { outline: 2px solid var(--steel); outline-offset: 2px; }
 
 /* ---------- badges / status ---------- */
@@ -201,7 +202,7 @@ button, input, select { font: inherit; color: inherit; }
   animation: alert-in 260ms var(--ease-out);
 }
 .alert-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 8px; background: var(--hazard); }
-.alert-card.leaving { animation: alert-out 220ms var(--ease-in-out) forwards; }
+.alert-card.leaving { animation: alert-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards; }
 .alert-title { font-weight: 640; }
 .alert-meta { font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 14px; }
 @keyframes alert-in { from { opacity: 0; transform: translateY(-6px); } }
@@ -231,11 +232,11 @@ dialog.modal {
   border: 0; padding: 0; border-radius: var(--r-lg); width: min(520px, calc(100vw - 32px));
   background: var(--panel); color: var(--ink); box-shadow: 0 24px 60px rgba(20, 26, 25, 0.28);
 }
-dialog.modal[open] { animation: modal-in 200ms var(--ease-out); }
-dialog.modal::backdrop { background: rgba(20, 26, 25, 0.45); animation: fade-in 200ms var(--ease-out); }
+dialog.modal[open] { animation: modal-in 160ms var(--ease-out); }
+dialog.modal::backdrop { background: rgba(20, 26, 25, 0.45); animation: fade-in 160ms var(--ease-out); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .modal-body { padding: 18px; }
-@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes modal-in { from { opacity: 0; transform: scale(0.97); } }
 @keyframes fade-in { from { opacity: 0; } }
 
 /* ---------- toast ---------- */
@@ -250,22 +251,80 @@ dialog.modal::backdrop { background: rgba(20, 26, 25, 0.45); animation: fade-in 
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* ---------- responsive ---------- */
+.nav-short { display: none; }
+
 @media (max-width: 900px) {
-  .shell { grid-template-columns: 1fr; }
-  .rail { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; }
-  .wordmark { padding: 0 8px 0 0; }
-  .nav { flex-direction: row; flex-wrap: wrap; }
-  .rail-foot { margin: 0 0 0 auto; border: 0; padding: 0; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  /* compact top bar */
+  .rail { position: sticky; top: 0; z-index: 20; height: auto; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 16px; min-height: 52px; }
+  .wordmark { padding: 0; }
+  .rail-foot { margin: 0; border: 0; padding: 0; display: block; }
   .rail-foot .who, .rail-foot .role { display: none; }
-  .rail-foot button { margin: 0; }
-  .main { padding: 20px 16px 48px; }
+  .rail-foot button { margin: 0; min-height: 44px; padding: 0 4px; }
+  /* fixed bottom tab bar */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    flex-direction: row; gap: 0; background: var(--rail); border-top: 1px solid var(--rail-hi);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav a {
+    flex: 1; min-width: 0; min-height: 56px; flex-direction: column; justify-content: center; gap: 3px;
+    border-radius: 0; padding: 6px 2px; font-size: 11.5px; position: relative;
+  }
+  .nav a.active { box-shadow: inset 0 3px 0 var(--yellow); }
+  .nav-long { display: none; }
+  .nav-short { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-count { position: absolute; top: 4px; left: 50%; margin: 0 0 0 6px; min-width: 18px; font-size: 11px; line-height: 18px; padding: 0 5px; }
+  .main { padding: 20px 16px calc(84px + env(safe-area-inset-bottom)); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .alert-card { grid-template-columns: 72px 1fr; }
   .alert-card > :last-child { grid-column: 1 / -1; }
   .thumb { width: 72px; }
+  .toasts { bottom: calc(76px + env(safe-area-inset-bottom)); right: 16px; left: 16px; }
 }
 
+@media (max-width: 640px) {
+  h1 { font-size: 21px; }
+  .page-head > .btn { width: 100%; }
+  .btn { height: 44px; }
+  .btn-sm { height: 44px; padding: 0 14px; }
+  .input, .select { height: 44px; font-size: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+  .chip { height: 44px; }
+  .form-actions { flex-direction: column-reverse; }
+  .form-actions .btn { width: 100%; }
+  .alert-card .btn { width: 100%; }
+  .stat { padding: 14px; }
+  .stat-value { font-size: 26px; }
+  .panel-head { padding: 12px 14px; }
+  .panel-body { padding: 14px; }
+  .check-row input { width: 22px; height: 22px; }
+
+  /* tables become stacked cards */
+  .table-wrap { overflow-x: visible; }
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table, .table tbody { display: block; }
+  .table tr { display: grid; gap: 6px 12px; padding: 14px; border-bottom: 1px solid var(--line); }
+  .table tr:last-child { border-bottom: 0; }
+  .table td, .table tr:last-child td { display: block; padding: 0; border: 0; min-width: 0; overflow-wrap: anywhere; }
+
+  /* modal becomes a bottom sheet */
+  dialog.modal {
+    width: 100%; max-width: 100%; margin: auto 0 0; max-height: 90vh; overflow-y: auto;
+    border-radius: var(--r-lg) var(--r-lg) 0 0; padding-bottom: env(safe-area-inset-bottom);
+  }
+  dialog.modal[open] { animation: sheet-in 240ms var(--ease-out); }
+  .modal-head .btn { width: auto; }
+}
+@keyframes sheet-in { from { transform: translateY(40px); opacity: 0; } }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  .btn:active { transform: none; }
+  @keyframes alert-in { from { opacity: 0; } }
+  @keyframes alert-out { to { opacity: 0; } }
+  @keyframes modal-in { from { opacity: 0; } }
+  @keyframes sheet-in { from { opacity: 0; } }
+  @keyframes toast-in { from { opacity: 0; } }
   .skeleton { animation: none; }
+  .spinner { animation-duration: 1.6s; }
 }

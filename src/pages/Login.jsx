@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { homeFor, useAuth } from '../auth'
 import { ErrorBox, Field, Spinner } from '../components/ui'
 import './Login.css'
+import camera from '../assets/camera.svg'
 
 const DEMO = [
   { label: 'System Admin', email: 'admin@sentinex.test' },
@@ -46,6 +47,7 @@ export default function Login() {
           <span className="wordmark-text">SENTINEX</span>
         </div>
         <p className="login-tagline">PPE and safety monitoring for factory CCTV.</p>
+        <img className="login-art" src={camera} alt="" width="640" height="480" />
         <div className="login-band" aria-hidden="true" />
       </div>
 
