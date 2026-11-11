@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ANALYSIS_STEPS, analyseVideo, getCameras, ppeLabel } from '../api'
-import { Empty, ErrorBox, Field, Icon, Skeleton, Spinner, Thumb, ViolationBadge, fmtDateTime, pad } from '../components/ui'
+import { CountUp, Empty, ErrorBox, Field, Icon, Skeleton, Spinner, Thumb, ViolationBadge, fmtDateTime, pad } from '../components/ui'
 import './Upload.css'
 
 const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`
@@ -140,10 +140,10 @@ export default function Upload() {
           <div className="panel-body">
             <p className="muted">{result.fileName} from {result.camera.name}</p>
             <div className="stats">
-              <div className="stat"><div className="stat-value">{mmss(result.durationSec)}</div><div className="stat-label">Video duration</div></div>
-              <div className="stat"><div className="stat-value">{result.framesAnalysed.toLocaleString()}</div><div className="stat-label">Frames analysed</div></div>
-              <div className="stat"><div className="stat-value">{result.workersTracked}</div><div className="stat-label">Workers tracked</div></div>
-              <div className={`stat${result.incidents.length ? ' warn' : ''}`}><div className="stat-value">{result.incidents.length}</div><div className="stat-label">Incidents found</div></div>
+              <div className="stat"><div className="stat-value"><CountUp value={result.durationSec} format={mmss} duration={1500} /></div><div className="stat-label">Video duration</div></div>
+              <div className="stat"><div className="stat-value"><CountUp value={result.framesAnalysed} format={(n) => n.toLocaleString()} duration={1500} /></div><div className="stat-label">Frames analysed</div></div>
+              <div className="stat"><div className="stat-value"><CountUp value={result.workersTracked} /></div><div className="stat-label">Workers tracked</div></div>
+              <div className={`stat${result.incidents.length ? ' warn' : ''}`}><div className="stat-value"><CountUp value={result.incidents.length} /></div><div className="stat-label">Incidents found</div></div>
             </div>
 
             {result.incidents.length === 0 ? (

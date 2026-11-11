@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { getAlerts, roleLabel } from '../api'
 import { useAuth } from '../auth'
 import { Icon } from './ui'
@@ -16,6 +16,29 @@ export default function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [pending, setPending] = useState(0)
+  const { pathname } = useLocation()
+  const navRef = useRef(null)
+  const indRef = useRef(null)
+
+  // slide the active pill to whichever link is current (re-measured on resize: rail <-> bottom tab bar)
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    const ind = indRef.current
+    if (!nav || !ind) return
+    const place = (animate) => {
+      const a = nav.querySelector('a.active')
+      if (!a) { ind.classList.remove('ready'); return }
+      ind.classList.toggle('animate', animate && ind.classList.contains('ready'))
+      ind.style.width = `${a.offsetWidth}px`
+      ind.style.height = `${a.offsetHeight}px`
+      ind.style.transform = `translate(${a.offsetLeft}px, ${a.offsetTop}px)`
+      ind.classList.add('ready')
+    }
+    place(true)
+    const onResize = () => place(false)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [pathname])
 
   // supervisors see the pending alert count everywhere (UC-06, polled every 5 s)
   useEffect(() => {
@@ -33,13 +56,14 @@ export default function Layout() {
           <span className="wordmark-mark" aria-hidden="true" />
           <span className="wordmark-text">SENTINEX</span>
         </a>
-        <nav className="nav" aria-label="Main">
+        <nav className="nav" aria-label="Main" ref={navRef}>
+          <span className="nav-ind" ref={indRef} aria-hidden="true" />
           {NAV.filter((n) => n.roles.includes(user.role)).map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'}>
               <Icon name={n.icon} />
               <span className="nav-long">{n.label}</span>
               <span className="nav-short">{n.short || n.label}</span>
-              {n.to === '/' && pending > 0 && <span className="nav-count" aria-label={`${pending} pending alerts`}>{pending}</span>}
+              {n.to === '/' && pending > 0 && <span key={pending} className="nav-count" aria-label={`${pending} pending alerts`}>{pending}</span>}
             </NavLink>
           ))}
         </nav>

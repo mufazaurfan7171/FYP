@@ -15,6 +15,33 @@ export function fmtAgo(iso) {
 }
 export const pad = (n) => String(n).padStart(2, '0')
 
+// ---------- motion helpers ----------
+export const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// Counts from the previous value to the new one (ease-out quart). Starts from 0 on first mount.
+export function CountUp({ value, format = (n) => n, duration = 1200 }) {
+  const [shown, setShown] = useState(() => (prefersReducedMotion() ? value : 0))
+  const cur = useRef(shown)
+  useEffect(() => {
+    if (prefersReducedMotion()) { cur.current = value; setShown(value); return }
+    const from = cur.current
+    if (from === value) return
+    const start = performance.now()
+    let raf
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / duration)
+      const n = Math.round(from + (value - from) * (1 - Math.pow(1 - p, 4)))
+      cur.current = n
+      setShown(n)
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [value, duration])
+  return format(shown)
+}
+
 // ---------- CCTV snapshot (SVG stand-in until real frames come from the worker) ----------
 export function Snapshot({ incident, compact = false }) {
   const id = incident.id
@@ -130,22 +157,41 @@ export function Field({ label, error, children }) {
 // ---------- modal (native <dialog>: Esc + focus handled by the browser) ----------
 export function Modal({ open, title, onClose, children }) {
   const ref = useRef(null)
+  const [mounted, setMounted] = useState(open)
+  // keep the last open content on screen while the exit animation plays
+  const last = useRef({ title, children })
+  if (open) last.current = { title, children }
   useEffect(() => {
     const d = ref.current
-    if (open && !d.open) d.showModal()
-    if (!open && d.open) d.close()
+    if (open) {
+      setMounted(true)
+      d.classList.remove('closing')
+      if (!d.open) d.showModal()
+      return
+    }
+    if (!d.open) return
+    if (prefersReducedMotion()) { d.close(); setMounted(false); return }
+    d.classList.add('closing')
+    const t = setTimeout(() => { d.close(); d.classList.remove('closing'); setMounted(false) }, 340)
+    return () => clearTimeout(t)
   }, [open])
+  const view = open ? { title, children } : last.current
   return (
-    <dialog ref={ref} className="modal" onClose={onClose} onClick={(e) => e.target === ref.current && onClose()}>
-      {open && (
+    <dialog
+      ref={ref}
+      className="modal"
+      onCancel={(e) => { e.preventDefault(); onClose() }}
+      onClick={(e) => e.target === ref.current && onClose()}
+    >
+      {(open || mounted) && (
         <>
           <div className="modal-head">
-            <h2>{title}</h2>
+            <h2>{view.title}</h2>
             <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
               <Icon name="close" />
             </button>
           </div>
-          <div className="modal-body">{children}</div>
+          <div className="modal-body">{view.children}</div>
         </>
       )}
     </dialog>
@@ -160,14 +206,15 @@ export function ToastProvider({ children }) {
   const toast = useCallback((message, kind = 'ok') => {
     const id = Math.random()
     setList((l) => [...l, { id, message, kind }])
-    setTimeout(() => setList((l) => l.filter((t) => t.id !== id)), 3200)
+    setTimeout(() => setList((l) => l.map((t) => (t.id === id ? { ...t, leaving: true } : t))), 3400)
+    setTimeout(() => setList((l) => l.filter((t) => t.id !== id)), 3700)
   }, [])
   return (
     <ToastCtx.Provider value={toast}>
       {children}
       <div className="toasts" role="status" aria-live="polite">
         {list.map((t) => (
-          <div key={t.id} className={`toast ${t.kind}`}><span className="dot" />{t.message}</div>
+          <div key={t.id} className={`toast ${t.kind}${t.leaving ? ' leaving' : ''}`}><span className="dot" />{t.message}</div>
         ))}
       </div>
     </ToastCtx.Provider>

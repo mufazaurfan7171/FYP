@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { acknowledgeAlert, getAlerts, getDashboard, violationLabel } from '../api'
 import { useAuth } from '../auth'
-import { ErrorBox, Empty, Skeleton, Thumb, ViolationBadge, fmtAgo, fmtDateTime, useToast } from '../components/ui'
+import { CountUp, ErrorBox, Empty, Skeleton, Thumb, ViolationBadge, fmtAgo, fmtDateTime, useToast } from '../components/ui'
 import './Dashboard.css'
 
 function greeting() {
@@ -50,11 +50,14 @@ export default function Dashboard() {
     try {
       await acknowledgeAlert(alert.id, user.id)
       acked.current.push(alert.id)
+      // pin the card's height so the exit animation can collapse it smoothly
+      const el = document.querySelector(`[data-alert="${alert.id}"]`)
+      if (el) el.style.setProperty('--h', `${el.offsetHeight}px`)
       setLeaving((l) => [...l, alert.id])
       setTimeout(() => {
         setAlerts((list) => list.filter((a) => a.id !== alert.id))
         setLeaving((l) => l.filter((id) => id !== alert.id))
-      }, 160)
+      }, 570)
       toast(`Alert #${alert.id} acknowledged`)
     } catch (e) {
       toast(e.message, 'error')
@@ -85,7 +88,7 @@ export default function Dashboard() {
               <h2 id="alerts-h">Active alerts <span className="faint">({alerts.length})</span></h2>
               <ul className="dash-alert-list" aria-live="polite">
                 {alerts.map((a) => (
-                  <li key={a.id} className={`alert-card${leaving.includes(a.id) ? ' leaving' : ''}`}>
+                  <li key={a.id} data-alert={a.id} className={`alert-card${leaving.includes(a.id) ? ' leaving' : ''}`}>
                     <Thumb incident={a.incident} />
                     <div className="dash-alert-info">
                       <span className="alert-title">{violationLabel(a.incident.type)}</span>
@@ -113,19 +116,19 @@ export default function Dashboard() {
 
           <div className="stats">
             <div className="stat">
-              <span className="stat-value">{data.summary.today}</span>
+              <span className="stat-value"><CountUp value={data.summary.today} /></span>
               <span className="stat-label">Violations today</span>
             </div>
             <div className="stat">
-              <span className="stat-value">{data.summary.week}</span>
+              <span className="stat-value"><CountUp value={data.summary.week} /></span>
               <span className="stat-label">This week</span>
             </div>
             <div className={`stat${alerts.length > 0 ? ' warn' : ''}`}>
-              <span className="stat-value">{alerts.length}</span>
+              <span className="stat-value"><CountUp value={alerts.length} duration={750} /></span>
               <span className="stat-label">Pending alerts</span>
             </div>
             <div className="stat">
-              <span className="stat-value">{data.summary.camerasOnline} <span className="dash-of">of {data.summary.camerasActive}</span></span>
+              <span className="stat-value"><CountUp value={data.summary.camerasOnline} /> <span className="dash-of">of {data.summary.camerasActive}</span></span>
               <span className="stat-label">Cameras online</span>
             </div>
           </div>

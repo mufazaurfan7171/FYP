@@ -1,0 +1,287 @@
+/* SENTINEX — motion system.
+   One vocabulary across the app: things enter by rising a few pixels and settling (spring),
+   leave faster than they arrive (ease-in), and hover/press feedback stays under 200 ms.
+   Continuous motion is reserved for meaning: live camera dots and the hazard edge on active alerts. */
+
+:root {
+  --t-press: 120ms;
+  --t-fast: 240ms;
+  --t-base: 360ms;
+  --t-enter: 780ms;
+  --stagger: 70ms;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* critically-damped-ish spring with a hair of overshoot */
+  --ease-spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%,
+    0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001);
+  --ease-bounce: linear(0, 0.063, 0.25 12.5%, 1.03 37.5%, 1.12 45%, 1.13, 1.1 56%, 0.99 68%, 0.985 75%, 1);
+}
+
+/* ================= keyframes ================= */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes rise-sm { from { opacity: 0; transform: translateY(6px); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(0.4); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes ping { 0% { transform: scale(1); opacity: 0.55; } 80%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes hazard-crawl { to { background-position: 0 19.8px; } }
+@keyframes hazard-slide { to { background-position: 39.6px 0; } }
+@keyframes draw { from { stroke-dashoffset: 24; } }
+@keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-5px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(1px); } }
+@keyframes nudge-in { from { opacity: 0; transform: translateX(-8px); } }
+
+@keyframes alert-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.985); }
+}
+/* acknowledge: slide out, then collapse the gap so the list closes up smoothly */
+@keyframes alert-out {
+  0% { height: var(--h, auto); }
+  45% { opacity: 0; transform: translateX(32px); height: var(--h, auto); }
+  100% { opacity: 0; transform: translateX(32px); height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: -8px; border-width: 0; }
+}
+
+@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+@keyframes modal-out { to { opacity: 0; transform: translateY(4px) scale(0.98); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes sheet-out { to { transform: translateY(100%); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(0.95); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(8px) scale(0.97); } }
+
+/* ================= page entrance (choreographed stagger) ================= */
+.page > :not(dialog) { animation: rise var(--t-enter) var(--ease-spring) backwards; }
+.page > :nth-child(2) { animation-delay: 90ms; }
+.page > :nth-child(3) { animation-delay: 180ms; }
+.page > :nth-child(4) { animation-delay: 270ms; }
+.page > :nth-child(5) { animation-delay: 360ms; }
+.page > :nth-child(n + 6) { animation-delay: 450ms; }
+
+/* list items cascade in (first dozen; later ones just appear with them) */
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li,
+.table tbody tr {
+  animation: rise-sm 630ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger) + 180ms);
+}
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(1), .table tbody tr:nth-child(1) { --i: 0; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(2), .table tbody tr:nth-child(2) { --i: 1; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(3), .table tbody tr:nth-child(3) { --i: 2; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(4), .table tbody tr:nth-child(4) { --i: 3; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(5), .table tbody tr:nth-child(5) { --i: 4; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(6), .table tbody tr:nth-child(6) { --i: 5; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(7), .table tbody tr:nth-child(7) { --i: 6; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(8), .table tbody tr:nth-child(8) { --i: 7; }
+:is(.dash-recent, .dash-cams, .dash-bars, .up-list, .steps) > li:nth-child(n + 9), .table tbody tr:nth-child(n + 9) { --i: 8; }
+
+/* stats: each tile rises in turn */
+.stats .stat { animation: rise-sm 690ms var(--ease-spring) backwards; }
+.stats .stat:nth-child(2) { animation-delay: 80ms; }
+.stats .stat:nth-child(3) { animation-delay: 150ms; }
+.stats .stat:nth-child(4) { animation-delay: 220ms; }
+.stat { transition: background-color var(--t-base) var(--ease-out); }
+.stat-value { transition: color var(--t-base) var(--ease-out); }
+
+/* ================= rail / nav ================= */
+.nav { position: relative; }
+.nav a { position: relative; z-index: 1; transition: background-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
+.nav a.active, .nav a.active:hover { background: transparent; box-shadow: none; }
+.nav svg { transition: transform var(--t-base) var(--ease-spring), opacity var(--t-fast) var(--ease-out); }
+.nav a:hover svg { transform: translateX(2px); opacity: 1; }
+.nav a:active svg { transform: scale(0.9); transition-duration: var(--t-press); }
+.nav a.active svg { opacity: 1; }
+
+/* sliding active indicator (positioned from Layout.jsx) */
+.nav-ind {
+  position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none;
+  border-radius: var(--r); background: var(--rail-hi);
+  opacity: 0;
+}
+.nav-ind::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 2px 2px 0; background: var(--yellow); }
+.nav-ind.ready { opacity: 1; }
+.nav-ind.animate {
+  transition: transform 630ms var(--ease-spring), width 630ms var(--ease-spring), height 630ms var(--ease-spring), opacity var(--t-fast) var(--ease-out);
+}
+.nav-count { animation: pop 570ms var(--ease-bounce); }
+
+.wordmark-mark { background-size: 39.6px 39.6px; transition: transform var(--t-base) var(--ease-spring); }
+.wordmark:hover .wordmark-mark { animation: hazard-slide 900ms linear infinite; transform: rotate(-8deg); }
+
+.rail-foot button { transition: color var(--t-fast) var(--ease-out), text-decoration-color var(--t-fast) var(--ease-out); text-decoration-color: rgba(201, 207, 204, 0.4); }
+.rail-foot button:hover { text-decoration-color: currentColor; }
+
+/* ================= buttons ================= */
+.btn {
+  transition:
+    background-color var(--t-fast) var(--ease-out),
+    border-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out),
+    transform var(--t-base) var(--ease-spring);
+}
+.btn:hover:not(:disabled) { box-shadow: 0 1px 0 rgba(20, 26, 25, 0.06), 0 2px 6px -2px rgba(20, 26, 25, 0.16); }
+.btn-ghost:hover:not(:disabled) { box-shadow: none; }
+.btn:active:not(:disabled) { transform: scale(0.97); transition: transform var(--t-press) var(--ease-out); }
+.btn:disabled { transition-duration: var(--t-base); }
+.btn svg { transition: transform var(--t-base) var(--ease-spring); }
+.btn:hover:not(:disabled) svg { transform: rotate(90deg); }
+.btn .spinner { animation: spin 700ms linear infinite, pop 260ms var(--ease-out); }
+.btn-ack:hover:not(:disabled) { box-shadow: 0 0 0 3px rgba(242, 178, 0, 0.28); }
+.btn-danger:hover:not(:disabled) { box-shadow: 0 0 0 3px rgba(168, 46, 26, 0.12); }
+
+/* text links: underline draws from the left */
+.panel-link {
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size var(--t-base) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.panel-link:hover { text-decoration: none; background-size: 100% 1px; }
+.row-select { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size var(--t-base) var(--ease-out); }
+.row-select:hover { text-decoration: none; background-size: 100% 1px; }
+
+.crumb { transition: color var(--t-fast) var(--ease-out); }
+.crumb svg { transition: transform var(--t-base) var(--ease-spring); }
+.crumb:hover svg { transform: translateX(-3px); }
+
+/* ================= forms ================= */
+.field > span { transition: color var(--t-fast) var(--ease-out); }
+.field:focus-within > span { color: var(--ink); }
+.input, .select { transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-base) var(--ease-out), background-color var(--t-fast) var(--ease-out); }
+.input:hover:not(:focus):not(:disabled), .select:hover:not(:focus):not(:disabled) { border-color: var(--ink-3); }
+.field-error { animation: rise-sm var(--t-base) var(--ease-out); }
+.field.has-error .input, .field.has-error .select { animation: shake 540ms var(--ease-out); }
+input[type='checkbox'] { accent-color: var(--ink); }
+
+.chip { transition: background-color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), transform var(--t-base) var(--ease-spring); }
+.chip:hover { border-color: var(--ink-3); }
+.chip.on:hover { border-color: var(--ink); }
+.chip:active { transform: scale(0.96); transition-duration: var(--t-press); }
+.chip .tick { transition: background-color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
+.chip .tick svg { animation: pop 450ms var(--ease-bounce); }
+.chip .tick svg path { stroke-dasharray: 24; animation: draw 420ms 90ms var(--ease-out) backwards; }
+
+/* dropzone */
+.dropzone { transition: border-color var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out), transform var(--t-base) var(--ease-spring); }
+.dropzone > svg { transition: transform var(--t-base) var(--ease-spring), color var(--t-fast) var(--ease-out); }
+.dropzone:hover:not(.disabled) { background: var(--panel); }
+.dropzone:hover:not(.disabled) > svg { transform: translateY(-3px); color: var(--steel); }
+.dropzone.over { background: #fff; transform: scale(1.01); border-style: solid; }
+.dropzone.over > svg { transform: translateY(-6px) scale(1.1); color: var(--steel); }
+.dropzone strong { transition: color var(--t-fast) var(--ease-out); }
+
+/* analysis steps */
+.steps li { transition: color var(--t-base) var(--ease-out); }
+.steps li.now { font-weight: 600; }
+.steps li.done { color: var(--green); }
+.steps li.done svg { animation: pop 480ms var(--ease-bounce); }
+.steps li.done svg path { stroke-dasharray: 24; animation: draw 480ms 120ms var(--ease-out) backwards; }
+.steps li.now .spinner { animation: spin 700ms linear infinite, pop 240ms var(--ease-out); }
+
+/* ================= rows & lists ================= */
+.table tr.clickable, .table tbody tr { transition: background-color var(--t-fast) var(--ease-out); }
+.table tr.selected td:first-child { transition: box-shadow var(--t-base) var(--ease-out); }
+.thumb .snap { transition: transform 720ms var(--ease-out); }
+:is(.dash-recent a, .table tr.clickable):hover .thumb .snap { transform: scale(1.08); }
+
+.dash-recent a { transition: background-color var(--t-fast) var(--ease-out); }
+.dash-recent-main { transition: transform var(--t-base) var(--ease-spring); }
+.dash-recent a:hover .dash-recent-main { transform: translateX(3px); }
+.dash-recent a:active { background: var(--panel-2); }
+
+/* bars grow from zero, one after another */
+.dash-bar span { transform-origin: left center; animation: grow-x 1350ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 100ms + 390ms); }
+.dash-bars li:nth-child(2) .dash-bar span { --i: 1; }
+.dash-bars li:nth-child(3) .dash-bar span { --i: 2; }
+.dash-bars li:nth-child(4) .dash-bar span { --i: 3; }
+.dash-bars li:nth-child(5) .dash-bar span { --i: 4; }
+.dash-bars li:nth-child(n + 6) .dash-bar span { --i: 5; }
+
+/* ================= alerts ================= */
+.alert-card {
+  animation: alert-in 690ms var(--ease-spring) backwards;
+  transition: box-shadow var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease-out);
+}
+.dash-alert-list > .alert-card:nth-child(2) { animation-delay: 80ms; }
+.dash-alert-list > .alert-card:nth-child(3) { animation-delay: 150ms; }
+.dash-alert-list > .alert-card:nth-child(n + 4) { animation-delay: 220ms; }
+.alert-card:hover { border-color: var(--line-2); box-shadow: 0 4px 14px -6px rgba(20, 26, 25, 0.18); }
+/* the hazard edge slowly crawls while an alert is unacknowledged */
+.alert-card::before { background-size: 19.8px 19.8px; animation: hazard-crawl 1.4s linear infinite; }
+.alert-card.leaving { animation: alert-out 570ms var(--ease-in-out) forwards; pointer-events: none; }
+.alert-card.leaving::before { animation-play-state: paused; }
+.dash-calm .badge { animation: pop 630ms var(--ease-bounce); }
+
+/* live dot on connected cameras */
+.badge .dot { position: relative; }
+.badge-green .dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; background: currentColor;
+  animation: ping 2.2s var(--ease-out) infinite;
+}
+.badge { transition: background-color var(--t-base) var(--ease-out), color var(--t-base) var(--ease-out); }
+
+/* ================= states ================= */
+.skeleton {
+  background: linear-gradient(100deg, var(--panel-2) 30%, #f7f8f5 50%, var(--panel-2) 70%);
+  background-size: 300% 100%;
+  animation: shimmer 1.6s var(--ease-in-out) infinite, fade-in 300ms var(--ease-out);
+}
+.spinner { animation: spin 700ms linear infinite; }
+.error-box { animation: rise-sm var(--t-base) var(--ease-out), shake 630ms 120ms var(--ease-out); }
+.empty { animation: fade-in 600ms var(--ease-out); }
+.notice { animation: fade-in 600ms var(--ease-out) backwards; }
+
+/* ================= modal ================= */
+dialog.modal[open] { animation: modal-in 480ms var(--ease-spring); }
+dialog.modal::backdrop { animation: fade-in 360ms var(--ease-out); }
+dialog.modal.closing { animation: modal-out 260ms var(--ease-in) forwards; }
+dialog.modal.closing::backdrop { animation: fade-out 260ms var(--ease-in) forwards; }
+.modal-body > .form > * { animation: rise-sm 540ms var(--ease-out) backwards; }
+.modal-body > .form > :nth-child(2) { animation-delay: 40ms; }
+.modal-body > .form > :nth-child(3) { animation-delay: 90ms; }
+.modal-body > .form > :nth-child(4) { animation-delay: 140ms; }
+.modal-body > .form > :nth-child(n + 5) { animation-delay: 180ms; }
+.modal.closing .modal-body > .form > * { animation: none; }
+@media (max-width: 640px) {
+  dialog.modal[open] { animation: sheet-in 570ms var(--ease-out); }
+  dialog.modal.closing { animation: sheet-out 330ms var(--ease-in) forwards; }
+}
+
+/* ================= toast ================= */
+.toast { animation: toast-in 630ms var(--ease-spring); transform-origin: bottom right; }
+.toast.leaving { animation: toast-out 300ms var(--ease-in) forwards; }
+.toast .dot { animation: pop 540ms 180ms var(--ease-bounce) backwards; }
+
+/* ================= login ================= */
+.login-brand > * { animation: nudge-in 960ms var(--ease-spring) backwards; }
+.login-tagline { animation-delay: 120ms; }
+.login-art { animation: rise 1200ms 240ms var(--ease-out) backwards; }
+.login-band { background-size: 39.6px 39.6px; animation: hazard-slide 3s linear infinite, fade-in 600ms 300ms backwards; }
+.login-form > * { animation: rise var(--t-enter) var(--ease-spring) backwards; }
+.login-form > :nth-child(2) { animation-delay: 100ms; }
+.login-form > :nth-child(3) { animation-delay: 210ms; }
+.login-form > :nth-child(4) { animation-delay: 320ms; }
+.login-form > .error-box { animation: rise-sm var(--t-base) var(--ease-out), shake 630ms 120ms var(--ease-out); }
+.login-demo-list .btn .faint { transition: color var(--t-fast) var(--ease-out), transform var(--t-base) var(--ease-spring); }
+.login-demo-list .btn:hover .faint { color: var(--ink-2); transform: translateX(-3px); }
+
+/* ================= reduced motion ================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .spinner, .btn .spinner, .steps li.now .spinner { animation: spin 1.6s linear infinite !important; }
+  .skeleton { animation: none !important; }
+  .badge-green .dot::after { display: none; }
+  .nav-ind.animate { transition: none !important; }
+}
+
+@media (max-width: 900px) {
+  .nav-ind { border-radius: 0; }
+  .nav-ind::before { left: 22%; right: 22%; top: 0; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  .nav a:hover svg { transform: translateY(-1px); }
+}
