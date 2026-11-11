@@ -1,0 +1,16 @@
+.split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 22px; align-items: start; }
+.split .rules { position: sticky; top: 20px; }
+.row-name { display: grid; gap: 2px; }
+.row-select { background: none; border: 0; padding: 0; text-align: left; font-weight: 620; cursor: pointer; color: var(--ink); }
+.row-select:hover { text-decoration: underline; text-underline-offset: 3px; }
+.table tr.selected td { background: #fff; }
+.table tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--steel); }
+.check-row { display: flex; align-items: center; gap: 8px; font-weight: 520; }
+.check-row input { width: 16px; height: 16px; }
+.rules-body { display: grid; gap: 16px; }
+.cell-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.skel-rows { display: grid; gap: 10px; padding: 18px; }
+@media (max-width: 900px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .split .rules { position: static; }
+}

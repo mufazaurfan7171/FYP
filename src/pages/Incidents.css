@@ -1,0 +1,11 @@
+.inc-filters { align-items: end; }
+.inc-actions { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.inc-link { color: inherit; text-decoration: none; display: block; }
+.inc-detail { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 18px; align-items: start; }
+.inc-media { display: grid; gap: 12px; }
+.inc-media video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: var(--r-lg); display: block; }
+.inc-media .snap { width: 100%; height: auto; border-radius: var(--r-lg); display: block; }
+.inc-dl { display: grid; gap: 14px; margin: 0; }
+.inc-dl dt { font-size: 13px; color: var(--ink-2); margin-bottom: 2px; }
+.inc-dl dd { margin: 0; }
+@media (max-width: 800px) { .inc-detail { grid-template-columns: 1fr; } }
